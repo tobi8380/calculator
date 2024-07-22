@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     i64,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
 
 // All fractions can be represented with a positive denominator
@@ -30,8 +30,11 @@ impl Fraction {
         if denom == 0 {
             panic!("Fraction should have nonzero denominator");
         }
-        let f = Self { numer, denom };
-        f.simplify()
+        // Simplify
+        let common_factor = gcd(numer.unsigned_abs(), denom);
+        let numer = numer / common_factor as i64;
+        let denom = denom / common_factor;
+        Self { numer, denom }
     }
 
     pub fn from_int(int: i64) -> Self {
@@ -50,12 +53,12 @@ impl Fraction {
         self.denom
     }
 
-    fn simplify(&self) -> Self {
-        let common_factor = gcd(self.numer.unsigned_abs(), self.denom);
-        let numer = self.numer / common_factor as i64;
-        let denom = self.denom / common_factor;
-        Self { numer, denom }
-    }
+    // fn simplify(&self) -> Self {
+    //     let common_factor = gcd(self.numer.unsigned_abs(), self.denom);
+    //     let numer = self.numer / common_factor as i64;
+    //     let denom = self.denom / common_factor;
+    //     Self { numer, denom }
+    // }
 }
 
 impl Display for Fraction {
@@ -74,6 +77,17 @@ impl Display for Fraction {
 //         self.numer * other.denom as i64 == other.numer * self.denom as i64
 //     }
 // }
+
+impl Neg for Fraction {
+    type Output = Fraction;
+
+    fn neg(self) -> Fraction {
+        Self {
+            numer: -self.numer,
+            denom: self.denom,
+        }
+    }
+}
 
 impl Add for Fraction {
     type Output = Fraction;
