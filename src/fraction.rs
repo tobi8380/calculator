@@ -4,12 +4,6 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-// NOTE:
-// By the fundamental theorem of arithmetic, rational numbers in lowest
-// terms are unique. So, by keeping `Rational`s in reduced form, we can
-// derive `Eq` and `PartialEq`.
-// #[derive(Debug, Eq, PartialEq)]
-
 // All fractions can be represented with a positive denominator
 // if both numer and denom are negative, then mutliply both with -1
 // if only denom is negative then make numer negative instead
@@ -20,7 +14,12 @@ use std::{
 //     Plus,
 //     Minus,
 // }
-#[derive(Debug, Clone)]
+// NOTE:
+// By the fundamental theorem of arithmetic, rational numbers in lowest
+// terms are unique. So, by keeping `Rational`s in reduced form, we can
+// derive `Eq` and `PartialEq`.
+// #[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Fraction {
     numer: i64,
     denom: u64,
@@ -31,14 +30,12 @@ impl Fraction {
         if denom == 0 {
             panic!("Fraction should have nonzero denominator");
         }
-        Self { numer, denom }
+        let f = Self { numer, denom };
+        f.simplify()
     }
 
     pub fn from_int(int: i64) -> Self {
-        Self {
-            numer: int,
-            denom: 1,
-        }
+        Fraction::new(int, 1)
     }
 
     pub fn to_float(&self) -> f64 {
@@ -53,7 +50,7 @@ impl Fraction {
         self.denom
     }
 
-    pub fn simplify(&self) -> Self {
+    fn simplify(&self) -> Self {
         let common_factor = gcd(self.numer.unsigned_abs(), self.denom);
         let numer = self.numer / common_factor as i64;
         let denom = self.denom / common_factor;
@@ -71,12 +68,12 @@ impl Display for Fraction {
     }
 }
 
-impl PartialEq for Fraction {
-    // a/b == c/d <=> a*d == b*c
-    fn eq(&self, other: &Self) -> bool {
-        self.numer * other.denom as i64 == other.numer * self.denom as i64
-    }
-}
+// impl PartialEq for Fraction {
+//     // a/b == c/d <=> a*d == b*c
+//     fn eq(&self, other: &Self) -> bool {
+//         self.numer * other.denom as i64 == other.numer * self.denom as i64
+//     }
+// }
 
 impl Add for Fraction {
     type Output = Fraction;
