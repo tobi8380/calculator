@@ -214,5 +214,45 @@ mod tests {
         let a = Fraction::from_int(5);
         let b = Fraction::from_int(13);
         assert_eq!(a + b, Fraction::from_int(18));
+
+        let c = Fraction::new(2, 3);
+        let d = Fraction::new(1, 6);
+        assert_eq!(c + d, Fraction::new(5, 6));
+    }
+
+    #[test]
+    fn sub() {
+        let a = Fraction::from_int(20);
+        let b = Fraction::from_int(9);
+        assert_eq!(a - b, Fraction::from_int(11));
+
+        let c = Fraction::new(2, 3);
+        let d = Fraction::new(3, 6);
+        assert_eq!(c - d, Fraction::new(1, 6));
+        // TODO: test negative
+    }
+
+    #[test]
+    fn mul() {
+        let a = Fraction::from_int(5);
+        let b = Fraction::from_int(6);
+        assert_eq!(a * b, Fraction::from_int(30));
+
+        let c = Fraction::new(2, 3);
+        let d = Fraction::new(3, 6);
+        assert_eq!(c * d, Fraction::new(6, 18));
+        // TODO: test negative
+    }
+
+    #[test]
+    fn div() {
+        let a = Fraction::from_int(24);
+        let b = Fraction::from_int(6);
+        assert_eq!(a / b, Fraction::from_int(4));
+
+        let c = Fraction::new(5, 6);
+        let d = Fraction::new(2, 3);
+        assert_eq!(c / d, Fraction::new(5, 4));
+        // TODO: test negative
     }
 }
