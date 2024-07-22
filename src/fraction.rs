@@ -1,6 +1,5 @@
 use std::{
     fmt::Display,
-    i64,
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
@@ -18,22 +17,27 @@ use std::{
 // By the fundamental theorem of arithmetic, rational numbers in lowest
 // terms are unique. So, by keeping `Rational`s in reduced form, we can
 // derive `Eq` and `PartialEq`.
-// #[derive(Debug, Eq, PartialEq)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Fraction {
     numer: i64,
-    denom: u64,
+    denom: i64,
 }
 
 impl Fraction {
-    pub fn new(numer: i64, denom: u64) -> Self {
+    pub fn new(numer: i64, denom: i64) -> Self {
         if denom == 0 {
             panic!("Fraction should have nonzero denominator");
         }
         // Simplify
-        let common_factor = gcd(numer.unsigned_abs(), denom);
-        let numer = numer / common_factor as i64;
-        let denom = denom / common_factor;
+        // TODO: change gcd to work with negative numbers
+        let gcd = gcd(numer.abs(), denom.abs());
+        let mut numer = numer / gcd;
+        let mut denom = denom / gcd;
+        // Ensure that denominator is positive
+        if denom < 0 {
+            numer = -numer;
+            denom = -denom;
+        }
         Self { numer, denom }
     }
 
@@ -49,16 +53,9 @@ impl Fraction {
         self.numer
     }
 
-    pub fn denom(&self) -> u64 {
+    pub fn denom(&self) -> i64 {
         self.denom
     }
-
-    // fn simplify(&self) -> Self {
-    //     let common_factor = gcd(self.numer.unsigned_abs(), self.denom);
-    //     let numer = self.numer / common_factor as i64;
-    //     let denom = self.denom / common_factor;
-    //     Self { numer, denom }
-    // }
 }
 
 impl Display for Fraction {
@@ -94,8 +91,7 @@ impl Add for Fraction {
 
     fn add(self, rhs: Self) -> Fraction {
         let denom = lcm(self.denom, rhs.denom);
-        let numer =
-            self.numer * (denom / self.denom) as i64 + rhs.numer * (denom / rhs.denom) as i64;
+        let numer = self.numer * denom / self.denom + rhs.numer * denom / rhs.denom;
         Self::new(numer, denom)
     }
 }
@@ -105,8 +101,7 @@ impl Sub for Fraction {
 
     fn sub(self, rhs: Self) -> Fraction {
         let denom = lcm(self.denom, rhs.denom);
-        let numer =
-            self.numer * (denom / self.denom) as i64 - rhs.numer * (denom / rhs.denom) as i64;
+        let numer = self.numer * denom / self.denom - rhs.numer * denom / rhs.denom;
         Self::new(numer, denom)
     }
 }
@@ -123,61 +118,34 @@ impl Div for Fraction {
     type Output = Fraction;
 
     fn div(self, rhs: Self) -> Self::Output {
-        // i think this is right?
-        let mut numer = self.numer * rhs.denom as i64;
-        let denom;
-        if rhs.numer < 0 {
-            // case: rhs.numer < 0 or (self.numer < 0 and rhs.numer < 0)
-            denom = rhs.numer.unsigned_abs() * self.denom;
-            numer = -numer;
-        } else {
-            // case: all positive or self.numer < 0
-            denom = rhs.numer as u64 * self.denom;
+        if rhs.numer == 0 {
+            panic!("Division by zero error");
         }
-        assert!(denom > 0);
+        let numer = self.numer * rhs.denom;
+        let denom = rhs.numer * self.denom;
         Self::new(numer, denom)
     }
 }
 
-// Return the greatest common divisor of a and b
-#[allow(clippy::comparison_chain)]
-fn gcd(a: u64, b: u64) -> u64 {
-    assert!(a > 0 && b > 0, "a: {a}, b: {b}");
-    if a == b {
-        a
-    } else if a < b {
-        gcd(a, b - a)
-    } else {
-        gcd(a - b, b)
+// Euclid's two-thousand-year-old algorithm for finding the greatest common
+// divisor.
+// Output will have same sign as x
+fn gcd(x: i64, y: i64) -> i64 {
+    let mut x = x;
+    let mut y = y;
+    while y != 0 {
+        let t = y;
+        y = x % y;
+        x = t;
     }
+    x
 }
 
-// NOTE: Probably better
-// fn gcd(a: u64, b: u64) -> u64 {
-//     if a % b == 0 {
-//         b
-//     } else {
-//         gcd(b, a % b)
-//     }
-// }
-
-// NOTE: Rust recommended, probably fastest
-// fn gcd(x: u64, y: u64) -> u64 {
-//     let mut x = x;
-//     let mut y = y;
-//     while y != 0 {
-//         let t = y;
-//         y = x % y;
-//         x = t;
-//     }
-//     x
-// }
-
 // Return the least common multiple of a and b
-fn lcm(a: u64, b: u64) -> u64 {
+fn lcm(a: i64, b: i64) -> i64 {
     assert!(a > 0 && b > 0, "a: {a}, b: {b}");
     // abs(a*b)/gcd(a, b)
-    a * b / gcd(a, b)
+    (a * b).abs() / gcd(a, b)
     // _lcm(a, b, a, b)
 }
 
@@ -211,6 +179,9 @@ mod tests {
         assert_eq!(gcd(8, 12), 4);
         assert_eq!(gcd(12, 8), 4);
         assert_eq!(gcd(54, 24), 6);
+        assert_eq!(gcd(-54, 24), -6);
+        assert_eq!(gcd(54, -24), 6);
+        assert_eq!(gcd(-54, -24), -6);
     }
 
     #[test]
