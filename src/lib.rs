@@ -1,4 +1,4 @@
-use std::{iter::Peekable, str::Split};
+use std::{iter::Peekable, result, str::Split};
 
 pub mod fraction;
 use fraction::Fraction;
@@ -11,7 +11,14 @@ pub fn eval_expression(exp: &str) -> Fraction {
 }
 
 fn parse_exp(tokens: &mut Tokenizer) -> Fraction {
-    let mut result = parse_mult(tokens);
+    let mut result;
+    // Handle potential unary minus sign
+    if let Some("-") = tokens.head() {
+        tokens.next();
+        result = -parse_mult(tokens);
+    } else {
+        result = parse_mult(tokens);
+    };
     loop {
         match tokens.head() {
             Some("+") => {
@@ -23,6 +30,16 @@ fn parse_exp(tokens: &mut Tokenizer) -> Fraction {
                 result = result - parse_mult(tokens)
             }
             _ => break,
+            // Some(")") => {
+            //     tokens.next();
+            //     break;
+            // }
+            // Some(invalid) => {
+            //     panic!("Malformed expression contained unexpected token: {invalid}");
+            // }
+            // None => {
+            //     break;
+            // }
         };
     }
     result
@@ -46,20 +63,37 @@ fn parse_mult(tokens: &mut Tokenizer) -> Fraction {
     result
 }
 
+// Power is not easy/possible if we want to keep fractions,
+// because raising to fractional powers leads to both numerator and
+// denominator potentially becoming fractional, which im not sure how to handle
+//
+// fn parse_pow(tokens: &mut Tokenizer) -> Fraction {
+//     let t = parse_factor(tokens);
+//     match tokens.head() {
+//         Some("^") => {
+//             tokens.next();
+//             t.pow(parse_pow(tokens))
+//         }
+//         _ => t,
+//     }
+// }
+
 fn parse_factor(tokens: &mut Tokenizer) -> Fraction {
-    match tokens.head() {
+    match tokens.next() {
         Some("(") => {
-            tokens.next();
-            parse_exp(tokens)
-        }
-        // TODO: maybe this would actually work with i64
-        Some(int) => match int.parse::<u64>() {
-            Ok(value) => {
-                tokens.next();
-                Fraction::from_int(value as i64)
+            let res = parse_exp(tokens);
+            match tokens.head() {
+                Some(")") => {
+                    tokens.next();
+                    res
+                }
+                _ => panic!("Malformed expression"),
             }
+        }
+        Some(int) => match int.parse::<u64>() {
+            Ok(value) => Fraction::from_int(value as i64),
             // TODO: Bubble error instead?
-            Err(_) => panic!("Factor should be positive integer"),
+            Err(_) => panic!("Factor should be an integer"),
         },
         None => panic!("Ill formed expression"),
     }
@@ -69,6 +103,7 @@ struct Tokenizer<'a> {
     tokens: Peekable<Split<'a, char>>,
 }
 
+// TODO: Make this able to work without spaces separating
 impl<'a> Tokenizer<'a> {
     fn new(exp: &'a str) -> Self {
         let tokens = exp.split(' ').peekable();
