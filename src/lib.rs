@@ -1,4 +1,11 @@
-use std::{iter::Peekable, result, str::Split};
+use std::{
+    iter::Peekable,
+    result,
+    slice::ChunkBy,
+    str::from_utf8,
+    str::{Chars, Split},
+    u8,
+};
 
 pub mod fraction;
 use fraction::Fraction;
@@ -100,28 +107,54 @@ fn parse_factor(tokens: &mut Tokenizer) -> Fraction {
 }
 
 struct Tokenizer<'a> {
-    tokens: Peekable<Split<'a, char>>,
+    // tokens: Peekable<Split<'a, char>>,
+    // prev: u32,
+    // curr: u32,
+    tokens: Peekable<Box<dyn Iterator<Item = &'a [u8]> + 'a>>,
 }
 
-// TODO: Make this able to work without spaces separating
+// TODO: this is so terrible, can't even filter whitespace without changing the type
+// maybe we should just collect into a vector...
 impl<'a> Tokenizer<'a> {
     fn new(exp: &'a str) -> Self {
-        let tokens = exp.split(' ').peekable();
-        Self { tokens }
+        // let tokens = exp.split(' ').peekable();
+        // Self { tokens }
+        let tokens: Box<dyn Iterator<Item = &'a [u8]>> = Box::new(
+            exp.as_bytes()
+                .chunk_by(|a, b| a.is_ascii_digit() && b.is_ascii_digit()), // .map(|s| from_utf8(s).unwrap()),
+                                                                            // .filter(|&s| from_utf8(s).unwrap().trim(),
+        );
+        Self {
+            tokens: tokens.peekable(),
+        }
     }
 
-    fn has_next(&mut self) -> bool {
-        self.tokens.peek().is_some()
-    }
+    // fn has_next(&mut self) -> bool {
+    //     self.tokens.peek().is_some()
+    // }
 
     fn next(&mut self) -> Option<&str> {
         // self.tokens.next().map(str::to_string)
-        self.tokens.next()
+
+        self.skip_whitespace();
+        self.tokens.next().map(|s| from_utf8(s).unwrap())
     }
 
     fn head(&mut self) -> Option<&str> {
         // self.tokens.peek().map(|s| s.to_string())
-        self.tokens.peek().cloned()
+        // self.tokens.peek().cloned()
+        self.skip_whitespace();
+        self.tokens.peek().map(|s| from_utf8(s).unwrap())
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(tok) = self.tokens.peek().map(|s| from_utf8(s).unwrap()) {
+            if tok.trim() == "" {
+                self.tokens.next();
+            } else {
+                break;
+            }
+        }
     }
 }
 
@@ -129,20 +162,39 @@ impl<'a> Tokenizer<'a> {
 mod tests {
     use super::*;
 
+    // #[test]
+    // fn tokenizer_split_spaces() {
+    //     let mut t = Tokenizer::new("hello how are you");
+    //     // assert!(t.has_next());
+    //     assert_eq!(t.head(), Some("hello"));
+    //     assert_eq!(t.next(), Some("hello"));
+    //     assert_eq!(t.head(), Some("how"));
+    //     assert_eq!(t.next(), Some("how"));
+    //     assert_eq!(t.head(), Some("are"));
+    //     assert_eq!(t.next(), Some("are"));
+    //     assert_eq!(t.head(), Some("you"));
+    //     assert_eq!(t.next(), Some("you"));
+    //     // assert!(!t.has_next());
+    //     assert_eq!(t.head(), None);
+    //     assert_eq!(t.next(), None);
+    // }
+
     #[test]
-    fn tokenizer_test() {
-        let mut t = Tokenizer::new("hello how are you");
-        assert!(t.has_next());
-        assert_eq!(t.head(), Some("hello"));
-        assert_eq!(t.next(), Some("hello"));
-        assert_eq!(t.head(), Some("how"));
-        assert_eq!(t.next(), Some("how"));
-        assert_eq!(t.head(), Some("are"));
-        assert_eq!(t.next(), Some("are"));
-        assert_eq!(t.head(), Some("you"));
-        assert_eq!(t.next(), Some("you"));
-        assert!(!t.has_next());
-        assert_eq!(t.head(), None);
+    fn tokenizer() {
+        let mut t = Tokenizer::new(" -2+ 3  / ( 3+2) * 89   ");
+        assert_eq!(t.head(), Some("-"));
+        assert_eq!(t.next(), Some("-"));
+        assert_eq!(t.next(), Some("2"));
+        assert_eq!(t.next(), Some("+"));
+        assert_eq!(t.next(), Some("3"));
+        assert_eq!(t.next(), Some("/"));
+        assert_eq!(t.next(), Some("("));
+        assert_eq!(t.next(), Some("3"));
+        assert_eq!(t.next(), Some("+"));
+        assert_eq!(t.next(), Some("2"));
+        assert_eq!(t.next(), Some(")"));
+        assert_eq!(t.next(), Some("*"));
+        assert_eq!(t.next(), Some("89"));
         assert_eq!(t.next(), None);
     }
 
